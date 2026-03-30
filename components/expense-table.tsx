@@ -1,6 +1,7 @@
 'use client'
 
 import { Trash2, Receipt, Users } from 'lucide-react'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -12,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Empty } from '@/components/ui/empty'
+import { Empty, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
 import { CATEGORY_COLORS, type Expense } from '@/lib/expense-types'
 
 interface ExpenseTableProps {
@@ -50,13 +51,13 @@ export function ExpenseTable({ expenses, onDeleteExpense }: ExpenseTableProps) {
       <Card className="border-border/50">
         <CardContent className="py-12">
           <Empty>
-            <Empty.Icon>
-              <Receipt className="size-8" />
-            </Empty.Icon>
-            <Empty.Title>No expenses yet</Empty.Title>
-            <Empty.Description>
+            <EmptyMedia variant="icon">
+              <Receipt className="size-6" />
+            </EmptyMedia>
+            <EmptyTitle>No expenses yet</EmptyTitle>
+            <EmptyDescription>
               Start tracking your spending by adding your first expense above.
-            </Empty.Description>
+            </EmptyDescription>
           </Empty>
         </CardContent>
       </Card>
