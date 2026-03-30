@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Empty } from '@/components/ui/empty'
+import { Empty, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
 import type { Split } from '@/lib/expense-types'
 
 interface SplitTrackerProps {
@@ -233,13 +233,13 @@ export function SplitTracker({ splits, onAddSplit, onDeleteSplit, onToggleSettle
         <CardContent>
           {sortedSplits.length === 0 ? (
             <Empty className="py-8">
-              <Empty.Icon>
-                <Users className="size-8" />
-              </Empty.Icon>
-              <Empty.Title>No split records</Empty.Title>
-              <Empty.Description>
+              <EmptyMedia variant="icon">
+                <Users className="size-6" />
+              </EmptyMedia>
+              <EmptyTitle>No split records</EmptyTitle>
+              <EmptyDescription>
                 Add a travel expense with split or create a manual entry
-              </Empty.Description>
+              </EmptyDescription>
             </Empty>
           ) : (
             <div className="rounded-lg border border-border overflow-hidden">
