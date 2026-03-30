@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { Plus, Minus } from 'lucide-react'
+import { Plus, Minus, CalendarIcon } from 'lucide-react'
+import { format } from 'date-fns'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -12,6 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { cn } from '@/lib/utils'
 import { CATEGORIES, type Category, type Expense, type Split, type SplitType, type SplitPerson } from '@/lib/expense-types'
 
 interface ExpenseFormProps {
@@ -23,6 +27,7 @@ export function ExpenseForm({ onAddExpense, onAddSplits }: ExpenseFormProps) {
   const [title, setTitle] = useState('')
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState<Category | ''>('')
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   
   // Travel split state
   const [splitType, setSplitType] = useState<SplitType>('paid')
@@ -35,6 +40,7 @@ export function ExpenseForm({ onAddExpense, onAddSplits }: ExpenseFormProps) {
     setTitle('')
     setAmount('')
     setCategory('')
+    setSelectedDate(undefined)
     setSplitType('paid')
     setSplitCount(2)
     setSplitPeople([''])
@@ -66,7 +72,8 @@ export function ExpenseForm({ onAddExpense, onAddSplits }: ExpenseFormProps) {
     if (!title.trim() || !amount || !category) return
 
     const parsedAmount = parseFloat(amount)
-    const now = new Date()
+    // Use selected date if provided, otherwise use current date/time
+    const expenseDate = selectedDate ? new Date(selectedDate) : new Date()
     const expenseId = crypto.randomUUID()
 
     if (category === 'Travel') {
@@ -91,7 +98,7 @@ export function ExpenseForm({ onAddExpense, onAddSplits }: ExpenseFormProps) {
           amount: parsedAmount, // Total amount paid
           actualAmount: myShare, // Your actual expense (your share)
           category,
-          date: now.toISOString(),
+          date: expenseDate.toISOString(),
           timestamp: Date.now(),
           splitDetails: {
             type: 'paid',
@@ -106,7 +113,7 @@ export function ExpenseForm({ onAddExpense, onAddSplits }: ExpenseFormProps) {
           amount: splitAmount,
           type: 'they_owe_me',
           description: `Split from: ${title.trim()}`,
-          date: now.toISOString(),
+          date: expenseDate.toISOString(),
           timestamp: Date.now(),
           settled: false,
           expenseId,
@@ -127,7 +134,7 @@ export function ExpenseForm({ onAddExpense, onAddSplits }: ExpenseFormProps) {
           amount: parsedAmount, // Total amount (for reference)
           actualAmount: oweAmountParsed, // Your actual expense (what you owe)
           category,
-          date: now.toISOString(),
+          date: expenseDate.toISOString(),
           timestamp: Date.now(),
           splitDetails: {
             type: 'owe',
@@ -141,7 +148,7 @@ export function ExpenseForm({ onAddExpense, onAddSplits }: ExpenseFormProps) {
           amount: oweAmountParsed,
           type: 'i_owe_them',
           description: `${owePerson.trim()} paid for: ${title.trim()}`,
-          date: now.toISOString(),
+          date: expenseDate.toISOString(),
           timestamp: Date.now(),
           settled: false,
           expenseId,
@@ -158,7 +165,7 @@ export function ExpenseForm({ onAddExpense, onAddSplits }: ExpenseFormProps) {
         amount: parsedAmount,
         actualAmount: parsedAmount, // For non-split expenses, actual = total
         category: category as Category,
-        date: now.toISOString(),
+        date: expenseDate.toISOString(),
         timestamp: Date.now(),
       }
       onAddExpense(expense)
@@ -221,6 +228,34 @@ export function ExpenseForm({ onAddExpense, onAddSplits }: ExpenseFormProps) {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="w-full sm:w-44 space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">
+                Date (Optional)
+              </label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start text-left font-normal bg-secondary/50',
+                      !selectedDate && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="size-4" />
+                    {selectedDate ? format(selectedDate, 'PPP') : 'Today'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    disabled={(date) => date > new Date()}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 

@@ -1,6 +1,5 @@
 'use client'
 
-// Updated to use correct Empty component exports
 import { useState, useMemo } from 'react'
 import { Plus, ArrowUpRight, ArrowDownLeft, Check, Clock, Trash2, Users } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
