@@ -82,10 +82,14 @@ export function ExpenseForm({ onAddExpense, onAddSplits }: ExpenseFormProps) {
           amount: splitAmount,
         }))
 
+        // Your actual expense is only your share (total / splitCount)
+        const myShare = splitAmount
+
         const expense: Expense = {
           id: expenseId,
           title: title.trim(),
-          amount: parsedAmount,
+          amount: parsedAmount, // Total amount paid
+          actualAmount: myShare, // Your actual expense (your share)
           category,
           date: now.toISOString(),
           timestamp: Date.now(),
@@ -116,10 +120,12 @@ export function ExpenseForm({ onAddExpense, onAddSplits }: ExpenseFormProps) {
 
         const oweAmountParsed = parseFloat(oweAmount)
 
+        // When you owe someone, your actual expense is what you owe
         const expense: Expense = {
           id: expenseId,
           title: title.trim(),
-          amount: parsedAmount,
+          amount: parsedAmount, // Total amount (for reference)
+          actualAmount: oweAmountParsed, // Your actual expense (what you owe)
           category,
           date: now.toISOString(),
           timestamp: Date.now(),
@@ -145,11 +151,12 @@ export function ExpenseForm({ onAddExpense, onAddSplits }: ExpenseFormProps) {
         onAddSplits([split])
       }
     } else {
-      // Non-travel expense
+      // Non-travel expense - actualAmount equals amount
       const expense: Expense = {
         id: expenseId,
         title: title.trim(),
         amount: parsedAmount,
+        actualAmount: parsedAmount, // For non-split expenses, actual = total
         category: category as Category,
         date: now.toISOString(),
         timestamp: Date.now(),

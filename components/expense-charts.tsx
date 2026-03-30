@@ -39,7 +39,8 @@ export function ExpenseCharts({ expenses }: ExpenseChartsProps) {
     }
 
     expenses.forEach((expense) => {
-      totals[expense.category] += expense.amount
+      // Use actualAmount (your share) instead of total amount
+      totals[expense.category] += expense.actualAmount ?? expense.amount
     })
 
     return CATEGORIES.map((category, index) => ({
@@ -64,7 +65,8 @@ export function ExpenseCharts({ expenses }: ExpenseChartsProps) {
       const expenseDate = new Date(expense.date).toISOString().split('T')[0]
       const day = days.find((d) => d.date === expenseDate)
       if (day) {
-        day.total += expense.amount
+        // Use actualAmount (your share) instead of total amount
+        day.total += expense.actualAmount ?? expense.amount
       }
     })
 
@@ -81,7 +83,8 @@ export function ExpenseCharts({ expenses }: ExpenseChartsProps) {
     expenses.forEach((expense) => {
       const expenseDate = new Date(expense.date)
       if (expenseDate.getFullYear() === currentYear) {
-        monthlyTotals[expenseDate.getMonth()].total += expense.amount
+        // Use actualAmount (your share) instead of total amount
+        monthlyTotals[expenseDate.getMonth()].total += expense.actualAmount ?? expense.amount
       }
     })
 

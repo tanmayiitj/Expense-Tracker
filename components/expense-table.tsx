@@ -1,6 +1,7 @@
 'use client'
 
 import { Trash2, Receipt, Users } from 'lucide-react'
+// Updated to use correct Empty component exports
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -96,7 +97,16 @@ export function ExpenseTable({ expenses, onDeleteExpense }: ExpenseTableProps) {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      {formatCurrency(expense.amount)}
+                      {expense.splitDetails && expense.splitDetails.type === 'paid' ? (
+                        <div className="flex flex-col items-end">
+                          <span>{formatCurrency(expense.actualAmount ?? expense.amount)}</span>
+                          <span className="text-xs text-muted-foreground">
+                            (paid {formatCurrency(expense.amount)})
+                          </span>
+                        </div>
+                      ) : (
+                        formatCurrency(expense.actualAmount ?? expense.amount)
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col">

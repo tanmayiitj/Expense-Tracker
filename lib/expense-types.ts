@@ -16,7 +16,8 @@ export interface SplitDetails {
 export interface Expense {
   id: string
   title: string
-  amount: number
+  amount: number // Total amount paid/involved
+  actualAmount: number // Your actual expense (after split calculation)
   category: Category
   date: string
   timestamp: number
