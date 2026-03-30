@@ -1,6 +1,6 @@
 'use client'
 
-import { Trash2, Receipt } from 'lucide-react'
+import { Trash2, Receipt, Users } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -12,13 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  Empty,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-  EmptyDescription,
-} from '@/components/ui/empty'
+import { Empty } from '@/components/ui/empty'
 import { CATEGORY_COLORS, type Expense } from '@/lib/expense-types'
 
 interface ExpenseTableProps {
@@ -55,16 +49,14 @@ export function ExpenseTable({ expenses, onDeleteExpense }: ExpenseTableProps) {
     return (
       <Card className="border-border/50">
         <CardContent className="py-12">
-          <Empty className="border-0">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <Receipt />
-              </EmptyMedia>
-              <EmptyTitle>No expenses yet</EmptyTitle>
-              <EmptyDescription>
-                Start tracking your spending by adding your first expense above.
-              </EmptyDescription>
-            </EmptyHeader>
+          <Empty>
+            <Empty.Icon>
+              <Receipt className="size-8" />
+            </Empty.Icon>
+            <Empty.Title>No expenses yet</Empty.Title>
+            <Empty.Description>
+              Start tracking your spending by adding your first expense above.
+            </Empty.Description>
           </Empty>
         </CardContent>
       </Card>
@@ -77,55 +69,72 @@ export function ExpenseTable({ expenses, onDeleteExpense }: ExpenseTableProps) {
         <CardTitle className="text-lg">Recent Expenses</CardTitle>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent border-border/50">
-              <TableHead>Title</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-              <TableHead>Date & Time</TableHead>
-              <TableHead className="text-right">Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {expenses.map((expense) => {
-              const { date, time } = formatDateTime(expense.date)
-              return (
-                <TableRow 
-                  key={expense.id} 
-                  className="border-border/50 transition-colors"
-                >
-                  <TableCell className="font-medium">{expense.title}</TableCell>
-                  <TableCell>
-                    <Badge className={`${CATEGORY_COLORS[expense.category]} border-0`}>
-                      {expense.category}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {formatCurrency(expense.amount)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="text-sm">{date}</span>
-                      <span className="text-xs text-muted-foreground">{time}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => onDeleteExpense(expense.id)}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="size-4" />
-                      <span className="sr-only">Delete expense</span>
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
+        <div className="rounded-lg border border-border overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-secondary/30 hover:bg-secondary/30">
+                <TableHead className="font-medium">Title</TableHead>
+                <TableHead className="font-medium">Category</TableHead>
+                <TableHead className="font-medium text-right">Amount</TableHead>
+                <TableHead className="font-medium">Date & Time</TableHead>
+                <TableHead className="font-medium">Split</TableHead>
+                <TableHead className="font-medium text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {expenses.map((expense) => {
+                const { date, time } = formatDateTime(expense.date)
+                return (
+                  <TableRow 
+                    key={expense.id} 
+                    className="hover:bg-secondary/20"
+                  >
+                    <TableCell className="font-medium">{expense.title}</TableCell>
+                    <TableCell>
+                      <Badge className={`${CATEGORY_COLORS[expense.category]} border-0`}>
+                        {expense.category}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {formatCurrency(expense.amount)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="text-sm">{date}</span>
+                        <span className="text-xs text-muted-foreground">{time}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {expense.splitDetails ? (
+                        <div className="flex items-center gap-1.5">
+                          <Users className="size-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">
+                            {expense.splitDetails.type === 'paid'
+                              ? `Split with ${expense.splitDetails.people.length}`
+                              : `Owe ${expense.splitDetails.people[0]?.name}`}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onDeleteExpense(expense.id)}
+                        className="size-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="size-4" />
+                        <span className="sr-only">Delete expense</span>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   )

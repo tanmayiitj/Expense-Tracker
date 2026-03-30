@@ -1,7 +1,6 @@
 'use client'
 
 import { Filter, X } from 'lucide-react'
-import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -10,28 +9,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { CATEGORIES, type Category } from '@/lib/expense-types'
+import { CATEGORIES, MONTHS, type Category } from '@/lib/expense-types'
 
 interface ExpenseFiltersProps {
   categoryFilter: Category | 'All'
   onCategoryChange: (category: Category | 'All') => void
-  startDate: string
-  endDate: string
-  onStartDateChange: (date: string) => void
-  onEndDateChange: (date: string) => void
+  monthFilter: number | 'All'
+  onMonthChange: (month: number | 'All') => void
   onClearFilters: () => void
 }
 
 export function ExpenseFilters({
   categoryFilter,
   onCategoryChange,
-  startDate,
-  endDate,
-  onStartDateChange,
-  onEndDateChange,
+  monthFilter,
+  onMonthChange,
   onClearFilters,
 }: ExpenseFiltersProps) {
-  const hasFilters = categoryFilter !== 'All' || startDate || endDate
+  const hasFilters = categoryFilter !== 'All' || monthFilter !== 'All'
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -54,23 +49,22 @@ export function ExpenseFilters({
         </SelectContent>
       </Select>
 
-      <div className="flex items-center gap-2">
-        <Input
-          type="date"
-          value={startDate}
-          onChange={(e) => onStartDateChange(e.target.value)}
-          className="w-36 bg-secondary/50"
-          placeholder="Start Date"
-        />
-        <span className="text-muted-foreground">to</span>
-        <Input
-          type="date"
-          value={endDate}
-          onChange={(e) => onEndDateChange(e.target.value)}
-          className="w-36 bg-secondary/50"
-          placeholder="End Date"
-        />
-      </div>
+      <Select 
+        value={monthFilter === 'All' ? 'All' : String(monthFilter)} 
+        onValueChange={(val) => onMonthChange(val === 'All' ? 'All' : parseInt(val))}
+      >
+        <SelectTrigger className="w-36 bg-secondary/50">
+          <SelectValue placeholder="Month" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="All">All Months</SelectItem>
+          {MONTHS.map((month, index) => (
+            <SelectItem key={month} value={String(index)}>
+              {month}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       {hasFilters && (
         <Button variant="ghost" size="sm" onClick={onClearFilters} className="text-muted-foreground">

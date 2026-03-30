@@ -14,7 +14,7 @@ import {
   Legend,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { CATEGORIES, type Expense, type Category } from '@/lib/expense-types'
+import { CATEGORIES, MONTHS, type Expense, type Category } from '@/lib/expense-types'
 
 interface ExpenseChartsProps {
   expenses: Expense[]
@@ -71,6 +71,23 @@ export function ExpenseCharts({ expenses }: ExpenseChartsProps) {
     return days
   }, [expenses])
 
+  const monthlyData = useMemo(() => {
+    const currentYear = new Date().getFullYear()
+    const monthlyTotals: { month: string; total: number }[] = MONTHS.map((month) => ({
+      month: month.slice(0, 3),
+      total: 0,
+    }))
+
+    expenses.forEach((expense) => {
+      const expenseDate = new Date(expense.date)
+      if (expenseDate.getFullYear() === currentYear) {
+        monthlyTotals[expenseDate.getMonth()].total += expense.amount
+      }
+    })
+
+    return monthlyTotals
+  }, [expenses])
+
   const formatCurrency = (value: number) => {
     if (value >= 1000) {
       return `₹${(value / 1000).toFixed(1)}K`
@@ -92,56 +109,90 @@ export function ExpenseCharts({ expenses }: ExpenseChartsProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <Card className="border-border/50">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Category-wise Spending</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {categoryData.length === 0 ? (
-            <div className="flex h-64 items-center justify-center text-muted-foreground">
-              No data to display
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie
-                  data={categoryData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={2}
-                  dataKey="value"
-                  strokeWidth={0}
-                >
-                  {categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-                <Legend
-                  verticalAlign="bottom"
-                  height={36}
-                  formatter={(value) => (
-                    <span className="text-sm text-foreground">{value}</span>
-                  )}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-        </CardContent>
-      </Card>
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card className="border-border/50">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Category-wise Spending</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {categoryData.length === 0 ? (
+              <div className="flex h-64 items-center justify-center text-muted-foreground">
+                No data to display
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={2}
+                    dataKey="value"
+                    strokeWidth={0}
+                  >
+                    {categoryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend
+                    verticalAlign="bottom"
+                    height={36}
+                    formatter={(value) => (
+                      <span className="text-sm text-foreground">{value}</span>
+                    )}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
 
+        <Card className="border-border/50">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">Last 7 Days Spending</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={last7DaysData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <XAxis
+                  dataKey="label"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: 'var(--color-muted-foreground)', fontSize: 12 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: 'var(--color-muted-foreground)', fontSize: 12 }}
+                  tickFormatter={formatCurrency}
+                />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--color-accent)' }} />
+                <Bar
+                  dataKey="total"
+                  fill="var(--color-chart-1)"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={50}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Monthly Breakdown Chart */}
       <Card className="border-border/50">
         <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Last 7 Days Spending</CardTitle>
+          <CardTitle className="text-lg">Monthly Spending ({new Date().getFullYear()})</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={last7DaysData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+            <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
               <XAxis
-                dataKey="label"
+                dataKey="month"
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: 'var(--color-muted-foreground)', fontSize: 12 }}
@@ -155,9 +206,9 @@ export function ExpenseCharts({ expenses }: ExpenseChartsProps) {
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--color-accent)' }} />
               <Bar
                 dataKey="total"
-                fill="var(--color-chart-1)"
+                fill="var(--color-chart-2)"
                 radius={[4, 4, 0, 0]}
-                maxBarSize={50}
+                maxBarSize={40}
               />
             </BarChart>
           </ResponsiveContainer>
