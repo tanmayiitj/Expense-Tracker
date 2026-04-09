@@ -14,10 +14,11 @@ import {
   Legend,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { CATEGORIES, MONTHS, type Expense, type Category } from '@/lib/expense-types'
+import { MONTHS, type Expense, type CategoryItem } from '@/lib/expense-types'
 
 interface ExpenseChartsProps {
   expenses: Expense[]
+  categories: CategoryItem[]
 }
 
 const COLORS = [
@@ -28,27 +29,23 @@ const COLORS = [
   'var(--color-chart-5)',
 ]
 
-export function ExpenseCharts({ expenses }: ExpenseChartsProps) {
+export function ExpenseCharts({ expenses, categories }: ExpenseChartsProps) {
   const categoryData = useMemo(() => {
-    const totals: Record<Category, number> = {
-      Food: 0,
-      Travel: 0,
-      Bills: 0,
-      Shopping: 0,
-      Other: 0,
-    }
+    const totals: Record<string, number> = {}
+    categories.forEach((cat) => { totals[cat.name] = 0 })
 
     expenses.forEach((expense) => {
-      // Use actualAmount (your share) instead of total amount
-      totals[expense.category] += expense.actualAmount ?? expense.amount
+      if (totals[expense.category] !== undefined) {
+        totals[expense.category] += expense.amount
+      }
     })
 
-    return CATEGORIES.map((category, index) => ({
-      name: category,
-      value: totals[category],
-      fill: COLORS[index],
+    return categories.map((category, index) => ({
+      name: category.name,
+      value: totals[category.name] ?? 0,
+      fill: COLORS[index % COLORS.length],
     })).filter((item) => item.value > 0)
-  }, [expenses])
+  }, [expenses, categories])
 
   const last7DaysData = useMemo(() => {
     const now = new Date()
@@ -65,8 +62,7 @@ export function ExpenseCharts({ expenses }: ExpenseChartsProps) {
       const expenseDate = new Date(expense.date).toISOString().split('T')[0]
       const day = days.find((d) => d.date === expenseDate)
       if (day) {
-        // Use actualAmount (your share) instead of total amount
-        day.total += expense.actualAmount ?? expense.amount
+        day.total += expense.amount
       }
     })
 
@@ -83,8 +79,7 @@ export function ExpenseCharts({ expenses }: ExpenseChartsProps) {
     expenses.forEach((expense) => {
       const expenseDate = new Date(expense.date)
       if (expenseDate.getFullYear() === currentYear) {
-        // Use actualAmount (your share) instead of total amount
-        monthlyTotals[expenseDate.getMonth()].total += expense.actualAmount ?? expense.amount
+        monthlyTotals[expenseDate.getMonth()].total += expense.amount
       }
     })
 

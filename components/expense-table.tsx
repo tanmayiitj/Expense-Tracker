@@ -1,6 +1,6 @@
 'use client'
 
-import { Trash2, Receipt, Users } from 'lucide-react'
+import { Trash2, Pencil, Receipt } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -13,14 +13,21 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Empty, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
-import { CATEGORY_COLORS, type Expense } from '@/lib/expense-types'
+import type { Expense, CategoryItem } from '@/lib/expense-types'
 
 interface ExpenseTableProps {
   expenses: Expense[]
   onDeleteExpense: (id: string) => void
+  onEditExpense: (expense: Expense) => void
+  categories: CategoryItem[]
 }
 
-export function ExpenseTable({ expenses, onDeleteExpense }: ExpenseTableProps) {
+export function ExpenseTable({ expenses, onDeleteExpense, onEditExpense, categories }: ExpenseTableProps) {
+  const getCategoryColor = (categoryName: string) => {
+    const cat = categories.find((c) => c.name === categoryName)
+    return cat?.color ?? 'bg-chart-5 text-primary-foreground'
+  }
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -77,8 +84,7 @@ export function ExpenseTable({ expenses, onDeleteExpense }: ExpenseTableProps) {
                 <TableHead className="font-medium">Category</TableHead>
                 <TableHead className="font-medium text-right">Amount</TableHead>
                 <TableHead className="font-medium">Date & Time</TableHead>
-                <TableHead className="font-medium">Split</TableHead>
-                <TableHead className="font-medium text-right">Action</TableHead>
+                <TableHead className="font-medium text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -91,21 +97,12 @@ export function ExpenseTable({ expenses, onDeleteExpense }: ExpenseTableProps) {
                   >
                     <TableCell className="font-medium">{expense.title}</TableCell>
                     <TableCell>
-                      <Badge className={`${CATEGORY_COLORS[expense.category]} border-0`}>
+                      <Badge className={`${getCategoryColor(expense.category)} border-0`}>
                         {expense.category}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      {expense.splitDetails && expense.splitDetails.type === 'paid' ? (
-                        <div className="flex flex-col items-end">
-                          <span>{formatCurrency(expense.actualAmount ?? expense.amount)}</span>
-                          <span className="text-xs text-muted-foreground">
-                            (paid {formatCurrency(expense.amount)})
-                          </span>
-                        </div>
-                      ) : (
-                        formatCurrency(expense.actualAmount ?? expense.amount)
-                      )}
+                      {formatCurrency(expense.amount)}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
@@ -113,30 +110,27 @@ export function ExpenseTable({ expenses, onDeleteExpense }: ExpenseTableProps) {
                         <span className="text-xs text-muted-foreground">{time}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {expense.splitDetails ? (
-                        <div className="flex items-center gap-1.5">
-                          <Users className="size-4 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">
-                            {expense.splitDetails.type === 'paid'
-                              ? `Split with ${expense.splitDetails.people.length}`
-                              : `Owe ${expense.splitDetails.people[0]?.name}`}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onDeleteExpense(expense.id)}
-                        className="size-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="size-4" />
-                        <span className="sr-only">Delete expense</span>
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onEditExpense(expense)}
+                          className="size-8 text-muted-foreground hover:text-foreground"
+                        >
+                          <Pencil className="size-4" />
+                          <span className="sr-only">Edit expense</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onDeleteExpense(expense.id)}
+                          className="size-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="size-4" />
+                          <span className="sr-only">Delete expense</span>
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )

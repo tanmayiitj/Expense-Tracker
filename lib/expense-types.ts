@@ -1,50 +1,37 @@
-export type Category = 'Food' | 'Travel' | 'Bills' | 'Shopping' | 'Other'
-
-export type SplitType = 'paid' | 'owe'
-
-export interface SplitPerson {
-  name: string
-  amount: number
-}
-
-export interface SplitDetails {
-  type: SplitType
-  splitCount?: number
-  people: SplitPerson[]
-}
-
 export interface Expense {
   id: string
   title: string
-  amount: number // Total amount paid/involved
-  actualAmount: number // Your actual expense (after split calculation)
-  category: Category
-  date: string
-  timestamp: number
-  splitDetails?: SplitDetails
-}
-
-export interface Split {
-  id: string
-  personName: string
   amount: number
-  type: 'they_owe_me' | 'i_owe_them'
-  description: string
+  category: string
   date: string
   timestamp: number
-  settled: boolean
-  expenseId?: string
 }
 
-export const CATEGORIES: Category[] = ['Food', 'Travel', 'Bills', 'Shopping', 'Other']
-
-export const CATEGORY_COLORS: Record<Category, string> = {
-  Food: 'bg-chart-1 text-primary-foreground',
-  Travel: 'bg-chart-2 text-primary-foreground',
-  Bills: 'bg-chart-3 text-primary-foreground',
-  Shopping: 'bg-chart-4 text-primary-foreground',
-  Other: 'bg-chart-5 text-primary-foreground',
+export interface CategoryItem {
+  name: string
+  color: string
 }
+
+export const DEFAULT_CATEGORIES: CategoryItem[] = [
+  { name: 'Food', color: 'bg-red-500 text-white' },
+  { name: 'Travel', color: 'bg-blue-500 text-white' },
+  { name: 'Bills', color: 'bg-emerald-500 text-white' },
+  { name: 'Shopping', color: 'bg-amber-500 text-white' },
+  { name: 'Other', color: 'bg-purple-500 text-white' },
+]
+
+export const CATEGORY_COLOR_PALETTE = [
+  'bg-red-500 text-white',
+  'bg-blue-500 text-white',
+  'bg-emerald-500 text-white',
+  'bg-amber-500 text-white',
+  'bg-purple-500 text-white',
+  'bg-pink-500 text-white',
+  'bg-cyan-500 text-white',
+  'bg-orange-500 text-white',
+  'bg-indigo-500 text-white',
+  'bg-teal-500 text-white',
+]
 
 export const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',

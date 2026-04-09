@@ -1,9 +1,17 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { Plus, CalendarIcon } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { CalendarIcon } from 'lucide-react'
 import { format } from 'date-fns'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,71 +26,72 @@ import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 import type { Expense, CategoryItem } from '@/lib/expense-types'
 
-interface ExpenseFormProps {
-  onAddExpense: (expense: Expense) => void
+interface EditExpenseDrawerProps {
+  expense: Expense | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSave: (expense: Expense) => void
   categories: CategoryItem[]
 }
 
-export function ExpenseForm({ onAddExpense, categories }: ExpenseFormProps) {
+export function EditExpenseDrawer({
+  expense,
+  open,
+  onOpenChange,
+  onSave,
+  categories,
+}: EditExpenseDrawerProps) {
   const [title, setTitle] = useState('')
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
 
-  const resetForm = useCallback(() => {
-    setTitle('')
-    setAmount('')
-    setCategory('')
-    setSelectedDate(undefined)
-  }, [])
+  useEffect(() => {
+    if (expense) {
+      setTitle(expense.title)
+      setAmount(String(expense.amount))
+      setCategory(expense.category)
+      setSelectedDate(new Date(expense.date))
+    }
+  }, [expense])
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!title.trim() || !amount || !category) return
+  const handleSave = () => {
+    if (!expense || !title.trim() || !amount || !category) return
 
     const parsedAmount = parseFloat(amount)
-    const expenseDate = selectedDate ? new Date(selectedDate) : new Date()
+    const expenseDate = selectedDate ?? new Date(expense.date)
 
-    const expense: Expense = {
-      id: crypto.randomUUID(),
+    onSave({
+      ...expense,
       title: title.trim(),
       amount: parsedAmount,
       category,
       date: expenseDate.toISOString(),
-      timestamp: Date.now(),
-    }
-
-    onAddExpense(expense)
-    resetForm()
+    })
+    onOpenChange(false)
   }
 
   return (
-    <Card className="border-border/50">
-      <CardHeader className="pb-4">
-        <CardTitle className="text-lg">Add New Expense</CardTitle>
-        <CardDescription>Track your daily spending</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <div className="flex-1 space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">
-                Expense Title
-              </label>
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent>
+        <div className="mx-auto w-full max-w-sm">
+          <DrawerHeader>
+            <DrawerTitle>Edit Expense</DrawerTitle>
+            <DrawerDescription>Update the expense details</DrawerDescription>
+          </DrawerHeader>
+          <div className="space-y-4 px-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Title</label>
               <Input
-                placeholder="e.g., Coffee, Groceries..."
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="bg-secondary/50"
               />
             </div>
-            <div className="w-full sm:w-32 space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">
-                {"Amount (₹)"}
-              </label>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">{"Amount (₹)"}</label>
               <Input
                 type="number"
-                placeholder="0.00"
                 min="0"
                 step="0.01"
                 value={amount}
@@ -90,13 +99,11 @@ export function ExpenseForm({ onAddExpense, categories }: ExpenseFormProps) {
                 className="bg-secondary/50"
               />
             </div>
-            <div className="w-full sm:w-40 space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">
-                Category
-              </label>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Category</label>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger className="w-full bg-secondary/50">
-                  <SelectValue placeholder="Select..." />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((cat) => (
@@ -107,10 +114,8 @@ export function ExpenseForm({ onAddExpense, categories }: ExpenseFormProps) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="w-full sm:w-44 space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">
-                Date (Optional)
-              </label>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Date</label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -121,7 +126,7 @@ export function ExpenseForm({ onAddExpense, categories }: ExpenseFormProps) {
                     )}
                   >
                     <CalendarIcon className="size-4" />
-                    {selectedDate ? format(selectedDate, 'PPP') : 'Today'}
+                    {selectedDate ? format(selectedDate, 'PPP') : 'Pick a date'}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -136,13 +141,14 @@ export function ExpenseForm({ onAddExpense, categories }: ExpenseFormProps) {
               </Popover>
             </div>
           </div>
-
-          <Button type="submit" className="w-full sm:w-auto">
-            <Plus className="size-4" />
-            Add Expense
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+          <DrawerFooter>
+            <Button onClick={handleSave}>Save Changes</Button>
+            <DrawerClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </div>
+      </DrawerContent>
+    </Drawer>
   )
 }

@@ -22,8 +22,7 @@ export function SummaryCards({ expenses }: SummaryCardsProps) {
 
     expenses.forEach((expense) => {
       const expenseDate = new Date(expense.date)
-      // Use actualAmount (your share) instead of total amount
-      const expenseAmount = expense.actualAmount ?? expense.amount
+      const expenseAmount = expense.amount
       
       if (expenseDate >= today) {
         daily += expenseAmount

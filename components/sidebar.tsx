@@ -1,9 +1,9 @@
 'use client'
 
-import { Wallet, Users, BarChart3 } from 'lucide-react'
+import { Wallet, BarChart3, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export type Section = 'expenses' | 'splits'
+export type Section = 'expenses' | 'visuals' | 'settings'
 
 interface SidebarProps {
   activeSection: Section
@@ -18,10 +18,16 @@ const navItems = [
     description: 'Track daily spending',
   },
   {
-    id: 'splits' as Section,
-    label: 'Split Tracker',
-    icon: Users,
-    description: 'Track who owes whom',
+    id: 'visuals' as Section,
+    label: 'Visuals',
+    icon: BarChart3,
+    description: 'Charts & analytics',
+  },
+  {
+    id: 'settings' as Section,
+    label: 'Settings',
+    icon: Settings,
+    description: 'Categories & export',
   },
 ]
 

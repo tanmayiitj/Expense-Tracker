@@ -1,6 +1,6 @@
 'use client'
 
-import { Filter, X } from 'lucide-react'
+import { Filter, X, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -9,14 +9,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { CATEGORIES, MONTHS, type Category } from '@/lib/expense-types'
+import { Badge } from '@/components/ui/badge'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
+import { cn } from '@/lib/utils'
+import { MONTHS, type CategoryItem } from '@/lib/expense-types'
 
 interface ExpenseFiltersProps {
-  categoryFilter: Category | 'All'
-  onCategoryChange: (category: Category | 'All') => void
+  categoryFilter: string[]
+  onCategoryChange: (categories: string[]) => void
   monthFilter: number | 'All'
   onMonthChange: (month: number | 'All') => void
   onClearFilters: () => void
+  categories: CategoryItem[]
 }
 
 export function ExpenseFilters({
@@ -25,8 +30,17 @@ export function ExpenseFilters({
   monthFilter,
   onMonthChange,
   onClearFilters,
+  categories,
 }: ExpenseFiltersProps) {
-  const hasFilters = categoryFilter !== 'All' || monthFilter !== 'All'
+  const hasFilters = categoryFilter.length > 0 || monthFilter !== 'All'
+
+  const toggleCategory = (name: string) => {
+    if (categoryFilter.includes(name)) {
+      onCategoryChange(categoryFilter.filter((c) => c !== name))
+    } else {
+      onCategoryChange([...categoryFilter, name])
+    }
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -34,20 +48,52 @@ export function ExpenseFilters({
         <Filter className="size-4" />
         <span>Filters</span>
       </div>
-      
-      <Select value={categoryFilter} onValueChange={(val) => onCategoryChange(val as Category | 'All')}>
-        <SelectTrigger className="w-36 bg-secondary/50">
-          <SelectValue placeholder="Category" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="All">All Categories</SelectItem>
-          {CATEGORIES.map((cat) => (
-            <SelectItem key={cat} value={cat}>
-              {cat}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" className="w-auto min-w-36 justify-start bg-secondary/50">
+            {categoryFilter.length === 0 ? (
+              <span className="text-muted-foreground">All Categories</span>
+            ) : (
+              <div className="flex flex-wrap gap-1">
+                {categoryFilter.length <= 2 ? (
+                  categoryFilter.map((c) => (
+                    <Badge key={c} variant="secondary" className="text-xs">{c}</Badge>
+                  ))
+                ) : (
+                  <Badge variant="secondary" className="text-xs">
+                    {categoryFilter.length} selected
+                  </Badge>
+                )}
+              </div>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-48 p-0" align="start">
+          <Command>
+            <CommandInput placeholder="Search category..." />
+            <CommandList>
+              <CommandEmpty>No category found.</CommandEmpty>
+              <CommandGroup>
+                {categories.map((cat) => (
+                  <CommandItem
+                    key={cat.name}
+                    onSelect={() => toggleCategory(cat.name)}
+                  >
+                    <Check
+                      className={cn(
+                        'mr-2 size-4',
+                        categoryFilter.includes(cat.name) ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                    {cat.name}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
 
       <Select 
         value={monthFilter === 'All' ? 'All' : String(monthFilter)} 
