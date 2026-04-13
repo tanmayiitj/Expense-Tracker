@@ -1,10 +1,9 @@
 import * as XLSX from 'xlsx'
 import type { Expense } from '@/lib/expense-types'
-import { MONTHS } from '@/lib/expense-types'
 
 export function exportExpensesToExcel(
   expenses: Expense[],
-  monthFilter: number | 'All',
+  monthFilter: string | 'All',
   categoryFilter: string[]
 ) {
   const now = new Date()
@@ -12,7 +11,7 @@ export function exportExpensesToExcel(
 
   const parts: string[] = ['expenses']
   if (monthFilter !== 'All') {
-    parts.push(MONTHS[monthFilter])
+    parts.push(monthFilter.replace(' ', '-'))
   }
   if (categoryFilter.length > 0) {
     parts.push(categoryFilter.join('-'))
@@ -21,7 +20,7 @@ export function exportExpensesToExcel(
 
   const filename = `${parts.join('-')}.xlsx`
   const sheetName = monthFilter !== 'All'
-    ? `${MONTHS[monthFilter]} ${year}`
+    ? monthFilter
     : `All Expenses ${year}`
 
   const data = expenses.map((expense) => ({

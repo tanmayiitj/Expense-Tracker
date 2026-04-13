@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { Filter, X, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -12,16 +13,17 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
-import { cn } from '@/lib/utils'
-import { MONTHS, type CategoryItem } from '@/lib/expense-types'
+import { cn, getExpenseCycleLabel } from '@/lib/utils'
+import type { CategoryItem, Expense } from '@/lib/expense-types'
 
 interface ExpenseFiltersProps {
   categoryFilter: string[]
   onCategoryChange: (categories: string[]) => void
-  monthFilter: number | 'All'
-  onMonthChange: (month: number | 'All') => void
+  monthFilter: string | 'All'
+  onMonthChange: (month: string | 'All') => void
   onClearFilters: () => void
   categories: CategoryItem[]
+  expenses: Expense[]
 }
 
 export function ExpenseFilters({
@@ -31,8 +33,24 @@ export function ExpenseFilters({
   onMonthChange,
   onClearFilters,
   categories,
+  expenses,
 }: ExpenseFiltersProps) {
   const hasFilters = categoryFilter.length > 0 || monthFilter !== 'All'
+
+  // Derive cycle labels from actual expenses
+  const cycleLabels = useMemo(() => {
+    const labels = new Set<string>()
+    expenses.forEach((e) => labels.add(getExpenseCycleLabel(e)))
+    // Sort: newest first (based on parsing "Month YYYY")
+    return Array.from(labels).sort((a, b) => {
+      const parse = (s: string) => {
+        const [month, year] = s.split(' ')
+        const months = ['January','February','March','April','May','June','July','August','September','October','November','December']
+        return (parseInt(year) * 12) + months.indexOf(month)
+      }
+      return parse(b) - parse(a)
+    })
+  }, [expenses])
 
   const toggleCategory = (name: string) => {
     if (categoryFilter.includes(name)) {
@@ -96,17 +114,17 @@ export function ExpenseFilters({
       </Popover>
 
       <Select 
-        value={monthFilter === 'All' ? 'All' : String(monthFilter)} 
-        onValueChange={(val) => onMonthChange(val === 'All' ? 'All' : parseInt(val))}
+        value={monthFilter} 
+        onValueChange={(val) => onMonthChange(val === 'All' ? 'All' : val)}
       >
-        <SelectTrigger className="w-36 bg-secondary/50">
+        <SelectTrigger className="w-40 bg-secondary/50">
           <SelectValue placeholder="Month" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="All">All Months</SelectItem>
-          {MONTHS.map((month, index) => (
-            <SelectItem key={month} value={String(index)}>
-              {month}
+          {cycleLabels.map((label) => (
+            <SelectItem key={label} value={label}>
+              {label}
             </SelectItem>
           ))}
         </SelectContent>

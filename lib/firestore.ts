@@ -7,10 +7,12 @@ import {
   onSnapshot,
   query,
   orderBy,
+  setDoc,
+  getDoc,
   type Unsubscribe,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import type { Expense, CategoryItem } from '@/lib/expense-types'
+import type { Expense, CategoryItem, UserSettings } from '@/lib/expense-types'
 
 function userExpensesCol(uid: string) {
   return collection(db, 'users', uid, 'expenses')
@@ -110,4 +112,37 @@ export async function seedDefaultCategories(uid: string, defaults: CategoryItem[
       resolve()
     }, reject)
   })
+}
+
+// --- User Settings ---
+
+function userSettingsDoc(uid: string) {
+  return doc(db, 'users', uid, 'settings', 'general')
+}
+
+export function subscribeUserSettings(
+  uid: string,
+  onData: (settings: UserSettings | null) => void,
+  onError: (error: Error) => void
+): Unsubscribe {
+  return onSnapshot(
+    userSettingsDoc(uid),
+    (snapshot) => {
+      if (snapshot.exists()) {
+        onData(snapshot.data() as UserSettings)
+      } else {
+        onData(null)
+      }
+    },
+    onError
+  )
+}
+
+export async function updateUserSettings(uid: string, settings: Partial<UserSettings>): Promise<void> {
+  await setDoc(userSettingsDoc(uid), settings, { merge: true })
+}
+
+export async function getUserSettings(uid: string): Promise<UserSettings | null> {
+  const snapshot = await getDoc(userSettingsDoc(uid))
+  return snapshot.exists() ? (snapshot.data() as UserSettings) : null
 }

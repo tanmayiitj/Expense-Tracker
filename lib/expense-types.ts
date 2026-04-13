@@ -5,6 +5,14 @@ export interface Expense {
   category: string
   date: string
   timestamp: number
+  cycleLabel?: string
+}
+
+export interface UserSettings {
+  currentCycleStart: string   // ISO date string of when current cycle began
+  currentCycleLabel: string   // e.g. "April 2026"
+  salary: number              // monthly salary/budget
+  isOnboarded: boolean        // whether onboarding is complete
 }
 
 export interface CategoryItem {

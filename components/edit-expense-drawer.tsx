@@ -24,6 +24,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
+import { getExpenseCycleLabel } from '@/lib/utils'
 import type { Expense, CategoryItem } from '@/lib/expense-types'
 
 interface EditExpenseDrawerProps {
@@ -140,6 +141,14 @@ export function EditExpenseDrawer({
                 </PopoverContent>
               </Popover>
             </div>
+            {expense && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Cycle</label>
+                <div className="rounded-md border bg-muted/50 px-3 py-2 text-sm">
+                  {getExpenseCycleLabel(expense)}
+                </div>
+              </div>
+            )}
           </div>
           <DrawerFooter>
             <Button onClick={handleSave}>Save Changes</Button>

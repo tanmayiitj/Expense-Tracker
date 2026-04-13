@@ -14,7 +14,8 @@ import {
   Legend,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { MONTHS, type Expense, type CategoryItem } from '@/lib/expense-types'
+import { type Expense, type CategoryItem } from '@/lib/expense-types'
+import { getExpenseCycleLabel } from '@/lib/utils'
 
 interface ExpenseChartsProps {
   expenses: Expense[]
@@ -70,20 +71,29 @@ export function ExpenseCharts({ expenses, categories }: ExpenseChartsProps) {
   }, [expenses])
 
   const monthlyData = useMemo(() => {
-    const currentYear = new Date().getFullYear()
-    const monthlyTotals: { month: string; total: number }[] = MONTHS.map((month) => ({
-      month: month.slice(0, 3),
-      total: 0,
-    }))
+    const totals: Record<string, number> = {}
 
     expenses.forEach((expense) => {
-      const expenseDate = new Date(expense.date)
-      if (expenseDate.getFullYear() === currentYear) {
-        monthlyTotals[expenseDate.getMonth()].total += expense.amount
-      }
+      const label = getExpenseCycleLabel(expense)
+      totals[label] = (totals[label] ?? 0) + expense.amount
     })
 
-    return monthlyTotals
+    // Sort by chronological order (newest last for bar chart reading)
+    const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
+    const sortedLabels = Object.keys(totals).sort((a, b) => {
+      const parse = (s: string) => {
+        const [month, year] = s.split(' ')
+        return (parseInt(year) * 12) + MONTH_NAMES.indexOf(month)
+      }
+      return parse(a) - parse(b)
+    })
+
+    // Show last 12 cycles max
+    const recentLabels = sortedLabels.slice(-12)
+    return recentLabels.map((label) => ({
+      month: label.split(' ')[0].slice(0, 3) + ' ' + label.split(' ')[1].slice(2),
+      total: totals[label],
+    }))
   }, [expenses])
 
   const formatCurrency = (value: number) => {
@@ -184,7 +194,7 @@ export function ExpenseCharts({ expenses, categories }: ExpenseChartsProps) {
       {/* Monthly Breakdown Chart */}
       <Card className="border-border/50">
         <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Monthly Spending ({new Date().getFullYear()})</CardTitle>
+          <CardTitle className="text-lg">Monthly Spending</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={280}>

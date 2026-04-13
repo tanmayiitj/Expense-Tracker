@@ -21,9 +21,10 @@ import type { Expense, CategoryItem } from '@/lib/expense-types'
 interface ExpenseFormProps {
   onAddExpense: (expense: Expense) => void
   categories: CategoryItem[]
+  currentCycleLabel?: string
 }
 
-export function ExpenseForm({ onAddExpense, categories }: ExpenseFormProps) {
+export function ExpenseForm({ onAddExpense, categories, currentCycleLabel }: ExpenseFormProps) {
   const [title, setTitle] = useState('')
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
@@ -50,6 +51,7 @@ export function ExpenseForm({ onAddExpense, categories }: ExpenseFormProps) {
       category,
       date: expenseDate.toISOString(),
       timestamp: Date.now(),
+      ...(currentCycleLabel ? { cycleLabel: currentCycleLabel } : {}),
     }
 
     onAddExpense(expense)

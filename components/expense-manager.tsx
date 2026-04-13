@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
-import { Wallet, BarChart3, Settings, Download, LogOut } from 'lucide-react'
+import { Wallet, BarChart3, Settings, Download, LogOut, RotateCcw } from 'lucide-react'
 import { auth } from '@/lib/firebase'
 import {
   subscribeExpenses,
@@ -13,7 +13,10 @@ import {
   addCategory as addCategoryDoc,
   deleteCategory as deleteCategoryDoc,
   seedDefaultCategories,
+  subscribeUserSettings,
+  updateUserSettings,
 } from '@/lib/firestore'
+import { getExpenseCycleLabel } from '@/lib/utils'
 import { Sidebar, MobileNav, type Section } from '@/components/sidebar'
 import { ExpenseForm } from '@/components/expense-form'
 import { SummaryCards } from '@/components/summary-cards'
@@ -23,8 +26,10 @@ import { ExpenseCharts } from '@/components/expense-charts'
 import { Settings as SettingsPanel } from '@/components/settings'
 import { EditExpenseDrawer } from '@/components/edit-expense-drawer'
 import { LoginScreen } from '@/components/login-screen'
+import { OnboardingDialog } from '@/components/onboarding-dialog'
+import { ResetMonthDialog } from '@/components/reset-month-dialog'
 import { Button } from '@/components/ui/button'
-import type { Expense, CategoryItem } from '@/lib/expense-types'
+import type { Expense, CategoryItem, UserSettings } from '@/lib/expense-types'
 import { DEFAULT_CATEGORIES } from '@/lib/expense-types'
 import { exportExpensesToExcel } from '@/lib/export'
 
@@ -37,7 +42,11 @@ export default function ExpenseManager() {
   const [categories, setCategories] = useState<CategoryItem[]>([])
   const [isLoaded, setIsLoaded] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState<string[]>([])
-  const [monthFilter, setMonthFilter] = useState<number | 'All'>('All')
+  const [monthFilter, setMonthFilter] = useState<string | 'All'>('All')
+
+  // User settings (salary cycle)
+  const [userSettings, setUserSettings] = useState<UserSettings | null>(null)
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
 
   // Edit drawer state
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
@@ -57,6 +66,8 @@ export default function ExpenseManager() {
     if (!user) {
       setExpenses([])
       setCategories([])
+      setUserSettings(null)
+      setSettingsLoaded(false)
       setIsLoaded(false)
       return
     }
@@ -76,14 +87,31 @@ export default function ExpenseManager() {
     const unsubCategories = subscribeCategories(
       user.uid,
       (data) => {
-        setCategories(data)
+        // Deduplicate by name (in case seed ran multiple times)
+        const seen = new Set<string>()
+        const unique = data.filter((cat) => {
+          if (seen.has(cat.name)) return false
+          seen.add(cat.name)
+          return true
+        })
+        setCategories(unique)
       },
       (err) => console.error('Categories subscription error:', err)
+    )
+
+    const unsubSettings = subscribeUserSettings(
+      user.uid,
+      (data) => {
+        setUserSettings(data)
+        setSettingsLoaded(true)
+      },
+      (err) => console.error('Settings subscription error:', err)
     )
 
     return () => {
       unsubExpenses()
       unsubCategories()
+      unsubSettings()
     }
   }, [user])
 
@@ -138,15 +166,50 @@ export default function ExpenseManager() {
     setMonthFilter('All')
   }, [])
 
-  // Filter expenses based on category and month
+  // Onboarding handler
+  const handleOnboardingComplete = useCallback(
+    async (settings: UserSettings) => {
+      if (!user) return
+      await updateUserSettings(user.uid, settings)
+    },
+    [user]
+  )
+
+  // Reset month handler
+  const handleResetMonth = useCallback(
+    async (newSalary: number, newCycleLabel: string) => {
+      if (!user) return
+      const now = new Date()
+
+      await updateUserSettings(user.uid, {
+        currentCycleStart: now.toISOString(),
+        currentCycleLabel: newCycleLabel,
+        salary: newSalary,
+      })
+    },
+    [user]
+  )
+
+  // Compute cycle spent (for reset dialog)
+  const cycleSpent = useMemo(() => {
+    if (!userSettings) return 0
+    return expenses.reduce((total, expense) => {
+      if (getExpenseCycleLabel(expense) === userSettings.currentCycleLabel) {
+        return total + expense.amount
+      }
+      return total
+    }, 0)
+  }, [expenses, userSettings])
+
+  // Filter expenses based on category and cycle label
   const filteredExpenses = useMemo(() => {
     return expenses.filter((expense) => {
       if (categoryFilter.length > 0 && !categoryFilter.includes(expense.category)) {
         return false
       }
       if (monthFilter !== 'All') {
-        const expenseMonth = new Date(expense.date).getMonth()
-        if (expenseMonth !== monthFilter) return false
+        const label = getExpenseCycleLabel(expense)
+        if (label !== monthFilter) return false
       }
       return true
     })
@@ -180,7 +243,7 @@ export default function ExpenseManager() {
   }
 
   // Data loading (Firestore first load)
-  if (!isLoaded) {
+  if (!isLoaded || !settingsLoaded) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="animate-pulse text-muted-foreground">Loading your expenses...</div>
@@ -188,8 +251,13 @@ export default function ExpenseManager() {
     )
   }
 
+  // Show onboarding for first-time users
+  const showOnboarding = settingsLoaded && !userSettings?.isOnboarded
+
   return (
     <div className="min-h-screen bg-background">
+      {/* Onboarding Dialog */}
+      <OnboardingDialog open={showOnboarding} onComplete={handleOnboardingComplete} />
       {/* Desktop Sidebar */}
       <div className="hidden lg:block">
         <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
@@ -216,6 +284,18 @@ export default function ExpenseManager() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {userSettings && (
+                      <ResetMonthDialog
+                        userSettings={userSettings}
+                        cycleSpent={cycleSpent}
+                        onConfirm={handleResetMonth}
+                      >
+                        <Button variant="outline" size="sm" title="Reset Month">
+                          <RotateCcw className="size-4" />
+                          <span className="hidden sm:inline">Reset Month</span>
+                        </Button>
+                      </ResetMonthDialog>
+                    )}
                     <Button variant="outline" size="sm" onClick={handleExport}>
                       <Download className="size-4" />
                       <span className="hidden sm:inline">Export</span>
@@ -228,8 +308,8 @@ export default function ExpenseManager() {
               </header>
 
               <div className="space-y-6">
-                <ExpenseForm onAddExpense={handleAddExpense} categories={categories} />
-                <SummaryCards expenses={expenses} />
+                <ExpenseForm onAddExpense={handleAddExpense} categories={categories} currentCycleLabel={userSettings?.currentCycleLabel} />
+                <SummaryCards expenses={expenses} userSettings={userSettings} />
                 <ExpenseFilters
                   categoryFilter={categoryFilter}
                   onCategoryChange={setCategoryFilter}
@@ -237,6 +317,7 @@ export default function ExpenseManager() {
                   onMonthChange={setMonthFilter}
                   onClearFilters={handleClearFilters}
                   categories={categories}
+                  expenses={expenses}
                 />
                 <ExpenseTable
                   expenses={sortedExpenses}
