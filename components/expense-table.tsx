@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/table'
 import { Empty, EmptyMedia, EmptyTitle, EmptyDescription } from '@/components/ui/empty'
 import type { Expense, CategoryItem } from '@/lib/expense-types'
+import { getExpenseCategories } from '@/lib/utils'
 
 interface ExpenseTableProps {
   expenses: Expense[]
@@ -97,9 +98,13 @@ export function ExpenseTable({ expenses, onDeleteExpense, onEditExpense, categor
                   >
                     <TableCell className="font-medium">{expense.title}</TableCell>
                     <TableCell>
-                      <Badge className={`${getCategoryColor(expense.category)} border-0`}>
-                        {expense.category}
-                      </Badge>
+                      <div className="flex flex-wrap gap-1">
+                        {getExpenseCategories(expense).map((cat) => (
+                          <Badge key={cat} className={`${getCategoryColor(cat)} border-0`}>
+                            {cat}
+                          </Badge>
+                        ))}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right font-mono">
                       {formatCurrency(expense.amount)}

@@ -25,6 +25,7 @@ interface OnboardingDialogProps {
 export function OnboardingDialog({ open, onComplete }: OnboardingDialogProps) {
   const [salaryDate, setSalaryDate] = useState<Date | undefined>(undefined)
   const [salary, setSalary] = useState('')
+  const [calendarOpen, setCalendarOpen] = useState(false)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -79,7 +80,7 @@ export function OnboardingDialog({ open, onComplete }: OnboardingDialogProps) {
             <label className="text-sm font-medium">
               When did you last receive your salary? <span className="text-destructive">*</span>
             </label>
-            <Popover>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -96,7 +97,10 @@ export function OnboardingDialog({ open, onComplete }: OnboardingDialogProps) {
                 <Calendar
                   mode="single"
                   selected={salaryDate}
-                  onSelect={setSalaryDate}
+                  onSelect={(date) => {
+                    setSalaryDate(date)
+                    setCalendarOpen(false)
+                  }}
                   disabled={(date) => date > new Date()}
                   initialFocus
                 />

@@ -57,6 +57,29 @@ export async function deleteExpense(uid: string, id: string): Promise<void> {
   await deleteDoc(doc(userExpensesCol(uid), id))
 }
 
+// Retroactively tag all expenses with cycle label based on cycle start
+export async function batchUpdateExpenseCycleLabels(
+  uid: string,
+  expenses: Expense[],
+  cycleStartDate: string,
+  cycleLabel: string
+): Promise<void> {
+  const cycleStartTimestamp = new Date(cycleStartDate).getTime()
+  
+  const updates = expenses
+    .filter((expense) => {
+      const expenseTimestamp = new Date(expense.date).getTime()
+      return expenseTimestamp >= cycleStartTimestamp
+    })
+    .map((expense) =>
+      updateDoc(doc(userExpensesCol(uid), expense.id), {
+        cycleLabel,
+      })
+    )
+
+  await Promise.all(updates)
+}
+
 // --- Categories ---
 
 export function subscribeCategories(
@@ -145,4 +168,31 @@ export async function updateUserSettings(uid: string, settings: Partial<UserSett
 export async function getUserSettings(uid: string): Promise<UserSettings | null> {
   const snapshot = await getDoc(userSettingsDoc(uid))
   return snapshot.exists() ? (snapshot.data() as UserSettings) : null
+}
+
+// --- Delete all user data (factory reset) ---
+
+export async function deleteAllUserData(uid: string): Promise<void> {
+  // Delete all expenses
+  const expensesSnap = await new Promise<import('firebase/firestore').QuerySnapshot>((resolve, reject) => {
+    const unsub = onSnapshot(query(userExpensesCol(uid)), (snap) => {
+      unsub()
+      resolve(snap)
+    }, reject)
+  })
+  const expenseDeletes = expensesSnap.docs.map((d) => deleteDoc(d.ref))
+
+  // Delete all categories
+  const categoriesSnap = await new Promise<import('firebase/firestore').QuerySnapshot>((resolve, reject) => {
+    const unsub = onSnapshot(query(userCategoriesCol(uid)), (snap) => {
+      unsub()
+      resolve(snap)
+    }, reject)
+  })
+  const categoryDeletes = categoriesSnap.docs.map((d) => deleteDoc(d.ref))
+
+  // Delete settings
+  const settingsDelete = deleteDoc(userSettingsDoc(uid))
+
+  await Promise.all([...expenseDeletes, ...categoryDeletes, settingsDelete])
 }

@@ -15,8 +15,10 @@ import {
   seedDefaultCategories,
   subscribeUserSettings,
   updateUserSettings,
+  batchUpdateExpenseCycleLabels,
+  deleteAllUserData,
 } from '@/lib/firestore'
-import { getExpenseCycleLabel } from '@/lib/utils'
+import { getExpenseCycleLabel, getExpenseCategories } from '@/lib/utils'
 import { Sidebar, MobileNav, type Section } from '@/components/sidebar'
 import { ExpenseForm } from '@/components/expense-form'
 import { SummaryCards } from '@/components/summary-cards'
@@ -170,9 +172,21 @@ export default function ExpenseManager() {
   const handleOnboardingComplete = useCallback(
     async (settings: UserSettings) => {
       if (!user) return
+      
+      // Save settings first
       await updateUserSettings(user.uid, settings)
+      
+      // Retroactively tag ALL existing expenses that fall after the cycle start
+      if (expenses.length > 0) {
+        await batchUpdateExpenseCycleLabels(
+          user.uid,
+          expenses,
+          settings.currentCycleStart,
+          settings.currentCycleLabel
+        )
+      }
     },
-    [user]
+    [user, expenses]
   )
 
   // Reset month handler
@@ -204,8 +218,9 @@ export default function ExpenseManager() {
   // Filter expenses based on category and cycle label
   const filteredExpenses = useMemo(() => {
     return expenses.filter((expense) => {
-      if (categoryFilter.length > 0 && !categoryFilter.includes(expense.category)) {
-        return false
+      if (categoryFilter.length > 0) {
+        const cats = getExpenseCategories(expense)
+        if (!cats.some((c) => categoryFilter.includes(c))) return false
       }
       if (monthFilter !== 'All') {
         const label = getExpenseCycleLabel(expense)
@@ -225,8 +240,17 @@ export default function ExpenseManager() {
   }, [filteredExpenses, monthFilter, categoryFilter])
 
   const handleSignOut = useCallback(() => {
+    setActiveSection('expenses')
     signOut(auth)
   }, [])
+
+  // Factory reset — delete all user data then sign out
+  const handleResetAccount = useCallback(async () => {
+    if (!user) return
+    await deleteAllUserData(user.uid)
+    setActiveSection('expenses')
+    await signOut(auth)
+  }, [user])
 
   // Auth loading
   if (authLoading) {
@@ -372,6 +396,7 @@ export default function ExpenseManager() {
                 onAddCategory={handleAddCategory}
                 onDeleteCategory={handleDeleteCategory}
                 expenses={expenses}
+                onResetAccount={handleResetAccount}
               />
             </>
           )}

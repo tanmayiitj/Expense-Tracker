@@ -1,5 +1,10 @@
 import * as XLSX from 'xlsx'
 import type { Expense } from '@/lib/expense-types'
+import { getExpenseCategories } from '@/lib/utils'
+
+function sanitizeFilename(str: string): string {
+  return str.replace(/[^a-zA-Z0-9\-_ ]/g, '').slice(0, 50)
+}
 
 export function exportExpensesToExcel(
   expenses: Expense[],
@@ -11,22 +16,23 @@ export function exportExpensesToExcel(
 
   const parts: string[] = ['expenses']
   if (monthFilter !== 'All') {
-    parts.push(monthFilter.replace(' ', '-'))
+    parts.push(sanitizeFilename(monthFilter.replace(' ', '-')))
   }
   if (categoryFilter.length > 0) {
-    parts.push(categoryFilter.join('-'))
+    parts.push(sanitizeFilename(categoryFilter.join('-')))
   }
   parts.push(String(year))
 
   const filename = `${parts.join('-')}.xlsx`
-  const sheetName = monthFilter !== 'All'
-    ? monthFilter
+  const sheetName = (monthFilter !== 'All'
+    ? sanitizeFilename(monthFilter)
     : `All Expenses ${year}`
+  ).slice(0, 31) // Excel sheet names max 31 chars
 
   const data = expenses.map((expense) => ({
     Title: expense.title,
     Amount: expense.amount,
-    Category: expense.category,
+    Category: getExpenseCategories(expense).join(', '),
     Date: new Date(expense.date).toLocaleDateString('en-IN', {
       day: '2-digit',
       month: 'short',

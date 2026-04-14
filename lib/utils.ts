@@ -14,3 +14,7 @@ export function getExpenseCycleLabel(expense: { cycleLabel?: string; date: strin
   if (expense.cycleLabel) return expense.cycleLabel
   return getCycleLabel(new Date(expense.date))
 }
+
+export function getExpenseCategories(expense: { category: string | string[] }): string[] {
+  return Array.isArray(expense.category) ? expense.category : [expense.category]
+}

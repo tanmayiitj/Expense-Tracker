@@ -15,7 +15,7 @@ import {
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { type Expense, type CategoryItem } from '@/lib/expense-types'
-import { getExpenseCycleLabel } from '@/lib/utils'
+import { getExpenseCycleLabel, getExpenseCategories } from '@/lib/utils'
 
 interface ExpenseChartsProps {
   expenses: Expense[]
@@ -36,14 +36,18 @@ export function ExpenseCharts({ expenses, categories }: ExpenseChartsProps) {
     categories.forEach((cat) => { totals[cat.name] = 0 })
 
     expenses.forEach((expense) => {
-      if (totals[expense.category] !== undefined) {
-        totals[expense.category] += expense.amount
-      }
+      const cats = getExpenseCategories(expense)
+      const share = expense.amount / cats.length
+      cats.forEach((cat) => {
+        if (totals[cat] !== undefined) {
+          totals[cat] += share
+        }
+      })
     })
 
     return categories.map((category, index) => ({
       name: category.name,
-      value: totals[category.name] ?? 0,
+      value: Math.round((totals[category.name] ?? 0) * 100) / 100,
       fill: COLORS[index % COLORS.length],
     })).filter((item) => item.value > 0)
   }, [expenses, categories])

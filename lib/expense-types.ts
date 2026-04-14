@@ -2,7 +2,7 @@ export interface Expense {
   id: string
   title: string
   amount: number
-  category: string
+  category: string | string[]
   date: string
   timestamp: number
   cycleLabel?: string

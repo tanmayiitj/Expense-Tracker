@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { CalendarIcon } from 'lucide-react'
+import { CalendarIcon, Check } from 'lucide-react'
 import { format } from 'date-fns'
 import {
   Drawer,
@@ -14,17 +14,11 @@ import {
 } from '@/components/ui/drawer'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Calendar } from '@/components/ui/calendar'
-import { cn } from '@/lib/utils'
-import { getExpenseCycleLabel } from '@/lib/utils'
+import { cn, getExpenseCycleLabel, getExpenseCategories } from '@/lib/utils'
 import type { Expense, CategoryItem } from '@/lib/expense-types'
 
 interface EditExpenseDrawerProps {
@@ -44,29 +38,39 @@ export function EditExpenseDrawer({
 }: EditExpenseDrawerProps) {
   const [title, setTitle] = useState('')
   const [amount, setAmount] = useState('')
-  const [category, setCategory] = useState('')
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
 
   useEffect(() => {
     if (expense) {
       setTitle(expense.title)
       setAmount(String(expense.amount))
-      setCategory(expense.category)
+      setSelectedCategories(getExpenseCategories(expense))
       setSelectedDate(new Date(expense.date))
     }
   }, [expense])
 
+  const toggleCategory = (name: string) => {
+    setSelectedCategories((prev) =>
+      prev.includes(name) ? prev.filter((c) => c !== name) : [...prev, name]
+    )
+  }
+
   const handleSave = () => {
-    if (!expense || !title.trim() || !amount || !category) return
+    if (!expense || !title.trim() || !amount || selectedCategories.length === 0) return
 
     const parsedAmount = parseFloat(amount)
+    if (isNaN(parsedAmount) || parsedAmount <= 0 || parsedAmount > 10_000_000) return
+
+    const sanitizedTitle = title.trim().slice(0, 100)
     const expenseDate = selectedDate ?? new Date(expense.date)
+    if (isNaN(expenseDate.getTime()) || expenseDate > new Date()) return
 
     onSave({
       ...expense,
-      title: title.trim(),
-      amount: parsedAmount,
-      category,
+      title: sanitizedTitle,
+      amount: Math.round(parsedAmount * 100) / 100,
+      category: selectedCategories.length === 1 ? selectedCategories[0] : selectedCategories,
       date: expenseDate.toISOString(),
     })
     onOpenChange(false)
@@ -86,6 +90,7 @@ export function EditExpenseDrawer({
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                maxLength={100}
                 className="bg-secondary/50"
               />
             </div>
@@ -93,7 +98,8 @@ export function EditExpenseDrawer({
               <label className="text-sm font-medium text-muted-foreground">{"Amount (₹)"}</label>
               <Input
                 type="number"
-                min="0"
+                min="0.01"
+                max="10000000"
                 step="0.01"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
@@ -102,18 +108,48 @@ export function EditExpenseDrawer({
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Category</label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="w-full bg-secondary/50">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.name} value={cat.name}>
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start bg-secondary/50"
+                  >
+                    {selectedCategories.length === 0 ? (
+                      <span className="text-muted-foreground">Select...</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {selectedCategories.map((c) => (
+                          <Badge key={c} variant="secondary" className="text-xs">{c}</Badge>
+                        ))}
+                      </div>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search..." />
+                    <CommandList>
+                      <CommandEmpty>No category found.</CommandEmpty>
+                      <CommandGroup>
+                        {categories.map((cat) => (
+                          <CommandItem
+                            key={cat.name}
+                            onSelect={() => toggleCategory(cat.name)}
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 size-4',
+                                selectedCategories.includes(cat.name) ? 'opacity-100' : 'opacity-0'
+                              )}
+                            />
+                            {cat.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground">Date</label>

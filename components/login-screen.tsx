@@ -10,8 +10,13 @@ export function LoginScreen() {
   const handleGoogleSignIn = async () => {
     try {
       await signInWithPopup(auth, googleProvider)
-    } catch (error) {
-      console.error('Sign-in failed:', error)
+    } catch (error: unknown) {
+      // Only log non-user-dismissed errors
+      const firebaseError = error as { code?: string }
+      if (firebaseError.code !== 'auth/popup-closed-by-user' && 
+          firebaseError.code !== 'auth/cancelled-popup-request') {
+        console.error('Sign-in error')
+      }
     }
   }
 
