@@ -30,10 +30,12 @@ import { EditExpenseDrawer } from '@/components/edit-expense-drawer'
 import { LoginScreen } from '@/components/login-screen'
 import { OnboardingDialog } from '@/components/onboarding-dialog'
 import { ResetMonthDialog } from '@/components/reset-month-dialog'
+import { PassphraseDialog } from '@/components/passphrase-dialog'
 import { Button } from '@/components/ui/button'
 import type { Expense, CategoryItem, UserSettings } from '@/lib/expense-types'
 import { DEFAULT_CATEGORIES } from '@/lib/expense-types'
 import { exportExpensesToExcel } from '@/lib/export'
+import { deriveKey, createVerifyToken, verifyPassphrase, encryptExpense, decryptExpense } from '@/lib/crypto'
 
 export default function ExpenseManager() {
   const [user, setUser] = useState<User | null>(null)
@@ -54,6 +56,13 @@ export default function ExpenseManager() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const [editDrawerOpen, setEditDrawerOpen] = useState(false)
 
+  // Encryption state
+  const [encryptionKey, setEncryptionKey] = useState<CryptoKey | null>(null)
+  const [rawExpenses, setRawExpenses] = useState<Expense[]>([])
+
+  // Determine if encryption is ready
+  const needsPassphrase = settingsLoaded && userSettings?.encryptionEnabled && !encryptionKey
+
   // Auth listener
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -67,10 +76,12 @@ export default function ExpenseManager() {
   useEffect(() => {
     if (!user) {
       setExpenses([])
+      setRawExpenses([])
       setCategories([])
       setUserSettings(null)
       setSettingsLoaded(false)
       setIsLoaded(false)
+      setEncryptionKey(null)
       return
     }
 
@@ -80,7 +91,7 @@ export default function ExpenseManager() {
     const unsubExpenses = subscribeExpenses(
       user.uid,
       (data) => {
-        setExpenses(data)
+        setRawExpenses(data)
         setIsLoaded(true)
       },
       (err) => console.error('Expenses subscription error:', err)
@@ -117,13 +128,32 @@ export default function ExpenseManager() {
     }
   }, [user])
 
+  // Decrypt raw expenses when key is available or encryption is off
+  useEffect(() => {
+    if (!isLoaded) return
+
+    if (!userSettings?.encryptionEnabled) {
+      setExpenses(rawExpenses)
+      return
+    }
+
+    if (!encryptionKey) return // wait for passphrase
+
+    let cancelled = false
+    Promise.all(rawExpenses.map((e) => decryptExpense(e, encryptionKey))).then((decrypted) => {
+      if (!cancelled) setExpenses(decrypted)
+    })
+    return () => { cancelled = true }
+  }, [rawExpenses, encryptionKey, userSettings?.encryptionEnabled, isLoaded])
+
   const handleAddExpense = useCallback(
     async (expense: Expense) => {
       if (!user) return
       const { id, ...data } = expense
-      await addExpense(user.uid, data)
+      const toStore = encryptionKey ? await encryptExpense(data, encryptionKey) : data
+      await addExpense(user.uid, toStore)
     },
-    [user]
+    [user, encryptionKey]
   )
 
   const handleEditExpense = useCallback((expense: Expense) => {
@@ -134,9 +164,10 @@ export default function ExpenseManager() {
   const handleSaveExpense = useCallback(
     async (expense: Expense) => {
       if (!user) return
-      await updateExpense(user.uid, expense.id, expense)
+      const toStore = encryptionKey ? await encryptExpense(expense, encryptionKey) : expense
+      await updateExpense(user.uid, toStore.id, toStore)
     },
-    [user]
+    [user, encryptionKey]
   )
 
   const handleDeleteExpense = useCallback(
@@ -170,8 +201,16 @@ export default function ExpenseManager() {
 
   // Onboarding handler
   const handleOnboardingComplete = useCallback(
-    async (settings: UserSettings) => {
+    async (settings: UserSettings, passphrase?: string) => {
       if (!user) return
+
+      // If passphrase provided, derive key and create verify token
+      if (passphrase) {
+        const key = await deriveKey(passphrase, user.uid)
+        const verifyToken = await createVerifyToken(key)
+        settings.encryptionVerify = verifyToken
+        setEncryptionKey(key)
+      }
       
       // Save settings first
       await updateUserSettings(user.uid, settings)
@@ -241,6 +280,7 @@ export default function ExpenseManager() {
 
   const handleSignOut = useCallback(() => {
     setActiveSection('expenses')
+    setEncryptionKey(null)
     signOut(auth)
   }, [])
 
@@ -249,8 +289,24 @@ export default function ExpenseManager() {
     if (!user) return
     await deleteAllUserData(user.uid)
     setActiveSection('expenses')
+    setEncryptionKey(null)
     await signOut(auth)
   }, [user])
+
+  // Passphrase unlock handler
+  const handleUnlock = useCallback(
+    async (passphrase: string): Promise<boolean> => {
+      if (!user || !userSettings?.encryptionVerify) return false
+      const key = await deriveKey(passphrase, user.uid)
+      const valid = await verifyPassphrase(key, userSettings.encryptionVerify)
+      if (valid) {
+        setEncryptionKey(key)
+        return true
+      }
+      return false
+    },
+    [user, userSettings]
+  )
 
   // Auth loading
   if (authLoading) {
@@ -282,6 +338,9 @@ export default function ExpenseManager() {
     <div className="min-h-screen bg-background">
       {/* Onboarding Dialog */}
       <OnboardingDialog open={showOnboarding} onComplete={handleOnboardingComplete} />
+
+      {/* Passphrase Dialog for encrypted accounts */}
+      <PassphraseDialog open={!!needsPassphrase} onUnlock={handleUnlock} />
       {/* Desktop Sidebar */}
       <div className="hidden lg:block">
         <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
@@ -291,7 +350,7 @@ export default function ExpenseManager() {
       <MobileNav activeSection={activeSection} onSectionChange={setActiveSection} />
 
       {/* Main Content */}
-      <main className="pb-20 lg:ml-64 lg:pb-0">
+      <main className="lg:ml-64 lg:pb-0" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}>
         <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
           {activeSection === 'expenses' && (
             <>

@@ -5,6 +5,12 @@ const withPWA = withPWAInit({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
+  reloadOnOnline: true,
+  fallbacks: {
+    document: '/~offline',
+  },
 })
 
 /** @type {import('next').NextConfig} */
@@ -12,8 +18,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Use webpack for build (next-pwa requires webpack config)
-  turbopack: {},
 }
 
 export default withPWA(nextConfig)

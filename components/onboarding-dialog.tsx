@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CalendarIcon, IndianRupee, Wallet } from 'lucide-react'
+import { CalendarIcon, IndianRupee, Wallet, Lock } from 'lucide-react'
 import { format } from 'date-fns'
 import {
   Dialog,
@@ -19,17 +19,23 @@ import type { UserSettings } from '@/lib/expense-types'
 
 interface OnboardingDialogProps {
   open: boolean
-  onComplete: (settings: UserSettings) => void
+  onComplete: (settings: UserSettings, passphrase?: string) => void
 }
 
 export function OnboardingDialog({ open, onComplete }: OnboardingDialogProps) {
   const [salaryDate, setSalaryDate] = useState<Date | undefined>(undefined)
   const [salary, setSalary] = useState('')
   const [calendarOpen, setCalendarOpen] = useState(false)
+  const [passphrase, setPassphrase] = useState('')
+  const [passphraseConfirm, setPassphraseConfirm] = useState('')
+
+  const passphraseSet = passphrase.length >= 4
+  const passphraseMismatch = passphraseSet && passphraseConfirm.length > 0 && passphrase !== passphraseConfirm
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!salaryDate) return
+    if (passphraseSet && passphrase !== passphraseConfirm) return
 
     const parsedSalary = parseFloat(salary) || 0
 
@@ -44,9 +50,10 @@ export function OnboardingDialog({ open, onComplete }: OnboardingDialogProps) {
       currentCycleLabel: getCycleLabel(nextMonth),
       salary: parsedSalary,
       isOnboarded: true,
+      encryptionEnabled: passphraseSet,
     }
 
-    onComplete(settings)
+    onComplete(settings, passphraseSet ? passphrase : undefined)
   }
 
   const computedCycleLabel = salaryDate
@@ -129,6 +136,38 @@ export function OnboardingDialog({ open, onComplete }: OnboardingDialogProps) {
             </p>
           </div>
 
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              <Lock className="inline size-3.5 mr-1" />
+              Data passphrase <span className="text-xs text-muted-foreground">(optional, min 4 chars)</span>
+            </label>
+            <Input
+              type="password"
+              placeholder="Set a passphrase to encrypt your data"
+              value={passphrase}
+              onChange={(e) => setPassphrase(e.target.value)}
+              autoComplete="new-password"
+            />
+            {passphraseSet && (
+              <Input
+                type="password"
+                placeholder="Confirm passphrase"
+                value={passphraseConfirm}
+                onChange={(e) => setPassphraseConfirm(e.target.value)}
+                autoComplete="new-password"
+                className={passphraseMismatch ? 'border-destructive' : ''}
+              />
+            )}
+            {passphraseMismatch && (
+              <p className="text-xs text-destructive">Passphrases don&apos;t match</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {passphraseSet
+                ? '🔒 Your expense titles & categories will be encrypted. Even the app owner cannot read them. You\'ll need this passphrase on every login.'
+                : 'Without a passphrase, your data is stored in readable form.'}
+            </p>
+          </div>
+
           {computedCycleLabel && (
             <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
               <p className="text-sm text-muted-foreground">
@@ -149,7 +188,7 @@ export function OnboardingDialog({ open, onComplete }: OnboardingDialogProps) {
           <Button
             type="submit"
             className="w-full"
-            disabled={!salaryDate}
+            disabled={!salaryDate || (passphraseSet && passphrase !== passphraseConfirm)}
           >
             Get Started
           </Button>

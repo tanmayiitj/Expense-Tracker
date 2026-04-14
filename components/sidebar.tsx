@@ -81,7 +81,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
 
 export function MobileNav({ activeSection, onSectionChange }: SidebarProps) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card lg:hidden">
+    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card lg:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       <nav className="flex">
         {navItems.map((item) => (
           <button
