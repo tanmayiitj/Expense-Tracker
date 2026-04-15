@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import dynamic from 'next/dynamic'
 
 // Prevent SSR/prerender — Firebase SDK requires browser APIs
@@ -13,5 +14,11 @@ const ExpenseManager = dynamic(() => import('@/components/expense-manager'), {
 })
 
 export default function Page() {
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+    }
+  }, [])
+
   return <ExpenseManager />
 }
