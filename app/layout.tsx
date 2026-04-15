@@ -1,10 +1,6 @@
 import type { Metadata, Viewport } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
-
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const viewport: Viewport = {
   themeColor: '#09090b',
@@ -18,7 +14,6 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'Daily Expense Manager',
   description: 'Track your daily spending smartly with this modern expense tracker',
-  generator: 'v0.app',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
