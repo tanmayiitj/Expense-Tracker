@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth'
+import dynamic from 'next/dynamic'
 import { Wallet, BarChart3, Settings, Download, LogOut, RotateCcw } from 'lucide-react'
 import { auth } from '@/lib/firebase'
 import {
@@ -24,9 +25,6 @@ import { ExpenseForm } from '@/components/expense-form'
 import { SummaryCards } from '@/components/summary-cards'
 import { ExpenseFilters } from '@/components/expense-filters'
 import { ExpenseTable } from '@/components/expense-table'
-import { ExpenseCharts } from '@/components/expense-charts'
-import { Settings as SettingsPanel } from '@/components/settings'
-import { EditExpenseDrawer } from '@/components/edit-expense-drawer'
 import { LoginScreen } from '@/components/login-screen'
 import { OnboardingDialog } from '@/components/onboarding-dialog'
 import { ResetMonthDialog } from '@/components/reset-month-dialog'
@@ -34,8 +32,18 @@ import { PassphraseDialog } from '@/components/passphrase-dialog'
 import { Button } from '@/components/ui/button'
 import type { Expense, CategoryItem, UserSettings } from '@/lib/expense-types'
 import { DEFAULT_CATEGORIES } from '@/lib/expense-types'
-import { exportExpensesToExcel } from '@/lib/export'
 import { deriveKey, createVerifyToken, verifyPassphrase, encryptExpense, decryptExpense } from '@/lib/crypto'
+
+// Lazy-load heavy tab components (recharts, xlsx, etc.)
+const ExpenseCharts = dynamic(() => import('@/components/expense-charts').then(m => ({ default: m.ExpenseCharts })), {
+  loading: () => <div className="flex h-64 items-center justify-center text-muted-foreground animate-pulse">Loading charts...</div>,
+})
+const SettingsPanel = dynamic(() => import('@/components/settings').then(m => ({ default: m.Settings })), {
+  loading: () => <div className="flex h-64 items-center justify-center text-muted-foreground animate-pulse">Loading settings...</div>,
+})
+const EditExpenseDrawer = dynamic(() => import('@/components/edit-expense-drawer').then(m => ({ default: m.EditExpenseDrawer })), {
+  ssr: false,
+})
 
 export default function ExpenseManager() {
   const [user, setUser] = useState<User | null>(null)
@@ -55,6 +63,9 @@ export default function ExpenseManager() {
   // Edit drawer state
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
   const [editDrawerOpen, setEditDrawerOpen] = useState(false)
+
+  // Account reset state
+  const [resettingAccount, setResettingAccount] = useState(false)
 
   // Encryption state
   const [encryptionKey, setEncryptionKey] = useState<CryptoKey | null>(null)
@@ -274,7 +285,8 @@ export default function ExpenseManager() {
     return [...filteredExpenses].sort((a, b) => b.timestamp - a.timestamp)
   }, [filteredExpenses])
 
-  const handleExport = useCallback(() => {
+  const handleExport = useCallback(async () => {
+    const { exportExpensesToExcel } = await import('@/lib/export')
     exportExpensesToExcel(filteredExpenses, monthFilter, categoryFilter)
   }, [filteredExpenses, monthFilter, categoryFilter])
 
@@ -287,10 +299,15 @@ export default function ExpenseManager() {
   // Factory reset — delete all user data then sign out
   const handleResetAccount = useCallback(async () => {
     if (!user) return
-    await deleteAllUserData(user.uid)
-    setActiveSection('expenses')
-    setEncryptionKey(null)
-    await signOut(auth)
+    setResettingAccount(true)
+    try {
+      await deleteAllUserData(user.uid)
+      setActiveSection('expenses')
+      setEncryptionKey(null)
+      await signOut(auth)
+    } catch {
+      setResettingAccount(false)
+    }
   }, [user])
 
   // Passphrase unlock handler
@@ -312,7 +329,7 @@ export default function ExpenseManager() {
   if (authLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <div className="animate-spin rounded-full size-8 border-2 border-muted-foreground border-t-primary" />
       </div>
     )
   }
@@ -322,11 +339,51 @@ export default function ExpenseManager() {
     return <LoginScreen />
   }
 
+  // Account deletion in progress — show loading until signOut completes
+  if (resettingAccount) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background">
+        <div className="animate-spin rounded-full size-8 border-2 border-muted-foreground border-t-primary" />
+        <p className="text-muted-foreground">Deleting your account...</p>
+      </div>
+    )
+  }
+
   // Data loading (Firestore first load)
   if (!isLoaded || !settingsLoaded) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground">Loading your expenses...</div>
+      <div className="min-h-screen bg-background">
+        <main className="lg:ml-64">
+          <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+            {/* Header skeleton */}
+            <div className="mb-8 flex items-center gap-3">
+              <div className="size-10 rounded-lg bg-muted animate-pulse" />
+              <div className="space-y-2">
+                <div className="h-6 w-48 rounded bg-muted animate-pulse" />
+                <div className="h-4 w-32 rounded bg-muted animate-pulse" />
+              </div>
+            </div>
+            {/* Summary cards skeleton */}
+            <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="rounded-xl border border-border/50 bg-card p-4 space-y-2">
+                  <div className="h-4 w-20 rounded bg-muted animate-pulse" />
+                  <div className="h-7 w-28 rounded bg-muted animate-pulse" />
+                </div>
+              ))}
+            </div>
+            {/* Table skeleton */}
+            <div className="rounded-xl border border-border/50 bg-card p-4 space-y-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <div className="h-4 flex-1 rounded bg-muted animate-pulse" />
+                  <div className="h-4 w-20 rounded bg-muted animate-pulse" />
+                  <div className="h-4 w-16 rounded bg-muted animate-pulse" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </main>
       </div>
     )
   }

@@ -14,7 +14,7 @@ import {
   Legend,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { type Expense, type CategoryItem } from '@/lib/expense-types'
+import { type Expense, type CategoryItem, CATEGORY_COLOR_HEX } from '@/lib/expense-types'
 import { getExpenseCycleLabel, getExpenseCategories } from '@/lib/utils'
 
 interface ExpenseChartsProps {
@@ -22,12 +22,9 @@ interface ExpenseChartsProps {
   categories: CategoryItem[]
 }
 
-const COLORS = [
-  'var(--color-chart-1)',
-  'var(--color-chart-2)',
-  'var(--color-chart-3)',
-  'var(--color-chart-4)',
-  'var(--color-chart-5)',
+const FALLBACK_COLORS = [
+  '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#a855f7',
+  '#ec4899', '#06b6d4', '#f97316', '#6366f1', '#14b8a6',
 ]
 
 export function ExpenseCharts({ expenses, categories }: ExpenseChartsProps) {
@@ -48,7 +45,7 @@ export function ExpenseCharts({ expenses, categories }: ExpenseChartsProps) {
     return categories.map((category, index) => ({
       name: category.name,
       value: Math.round((totals[category.name] ?? 0) * 100) / 100,
-      fill: COLORS[index % COLORS.length],
+      fill: CATEGORY_COLOR_HEX[category.color] ?? FALLBACK_COLORS[index % FALLBACK_COLORS.length],
     })).filter((item) => item.value > 0)
   }, [expenses, categories])
 

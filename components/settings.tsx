@@ -159,7 +159,7 @@ export function Settings({ categories, onAddCategory, onDeleteCategory, expenses
                   Reset Account
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
                   <div className="mx-auto mb-2 rounded-full bg-destructive/10 p-3 w-fit">
                     <TriangleAlert className="size-6 text-destructive" />
