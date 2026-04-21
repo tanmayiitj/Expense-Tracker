@@ -46,8 +46,10 @@ const EditExpenseDrawer = dynamic(() => import('@/components/edit-expense-drawer
 })
 
 export default function ExpenseManager() {
-  const [user, setUser] = useState<User | null>(null)
-  const [authLoading, setAuthLoading] = useState(true)
+  // Optimistic auth: use cached currentUser immediately so returning users
+  // skip the loading spinner. onAuthStateChanged will correct if needed.
+  const [user, setUser] = useState<User | null>(auth.currentUser)
+  const [authLoading, setAuthLoading] = useState(!auth.currentUser)
 
   const [activeSection, setActiveSection] = useState<Section>('expenses')
   const [expenses, setExpenses] = useState<Expense[]>([])
