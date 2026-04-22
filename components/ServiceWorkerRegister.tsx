@@ -2,6 +2,15 @@
 
 import { useEffect } from 'react'
 
+declare global {
+  interface Window {
+    serwist?: {
+      addEventListener: (event: string, callback: () => void) => void
+      register: () => void
+    }
+  }
+}
+
 export default function ServiceWorkerRegister() {
   useEffect(() => {
     if (
