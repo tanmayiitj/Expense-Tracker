@@ -24,7 +24,17 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-## Learn More
+## PWA icons — action required
+
+The three icon files currently in `public/` are placeholder images (all the same size/content). **Before releasing to production, replace them with properly sized images:**
+
+- `public/apple-icon.png` → **180×180 px** — must have an opaque background (no transparency); iOS renders transparent areas as black on the home screen.
+- `public/icon-192x192.png` → **192×192 px**
+- `public/icon-512x512.png` → **512×512 px**
+
+After replacing the icons, delete the old home-screen shortcut on your iPhone and re-add the site via Safari → Share → Add to Home Screen so iOS picks up the new icons and service worker.
+
+
 
 To learn more, take a look at the following resources:
 
