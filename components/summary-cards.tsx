@@ -15,7 +15,11 @@ export function SummaryCards({ expenses, userSettings }: SummaryCardsProps) {
   const { daily, weekly, cycleSpent } = useMemo(() => {
     const now = new Date()
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+
+    // Week starts on Monday — find the most recent Monday at 00:00
+    const dayOfWeek = today.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
+    const daysSinceMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+    const weekStart = new Date(today.getTime() - daysSinceMonday * 24 * 60 * 60 * 1000)
 
     let daily = 0
     let weekly = 0
@@ -30,7 +34,7 @@ export function SummaryCards({ expenses, userSettings }: SummaryCardsProps) {
       if (expenseDate >= today) {
         daily += expenseAmount
       }
-      if (expenseDate >= weekAgo) {
+      if (expenseDate >= weekStart) {
         weekly += expenseAmount
       }
       if (currentLabel && getExpenseCycleLabel(expense) === currentLabel) {
