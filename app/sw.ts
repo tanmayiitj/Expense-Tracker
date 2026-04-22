@@ -34,7 +34,7 @@ const serwist = new Serwist({
     },
     // Firestore — always go to network (Firestore handles its own offline cache)
     {
-      matcher: /^https:\/\/.*firestore\.googleapis\.com\/.*/i,
+      matcher: /^https:\/\/firestore\.googleapis\.com\/.*/i,
       handler: new NetworkOnly(),
     },
     // Google Fonts — cache-first

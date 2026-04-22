@@ -19,7 +19,9 @@ export default function ServiceWorkerRegister() {
       process.env.NODE_ENV === 'production'
     ) {
       // Fallback manual registration
-      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {})
+      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((err) => {
+        console.warn('SW registration failed:', err)
+      })
     }
   }, [])
 
